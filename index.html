@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Simuladores LIGA Mensal</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+body{min-height:100vh;background:#f26322;color:#fff}
+.landing{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:55px 35px}
+.landing-wrap{width:min(1120px,100%);text-align:center}
+.logo{display:flex;justify-content:center;align-items:center;margin:0 auto 30px}
+.logo img{display:block;width:min(430px,72vw);height:auto}
+.landing h1{font-size:27px;line-height:1.35;margin:0 0 34px;font-weight:700;color:#fff}
+.choices{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;text-align:left}
+.choice{display:flex;flex-direction:column;min-height:250px;padding:27px;border-radius:18px;background:#fff;color:#462a71;border:0;box-shadow:0 15px 35px rgba(70,42,113,.16);text-decoration:none;transition:transform .18s ease,box-shadow .18s ease}
+.choice:hover{transform:translateY(-5px);box-shadow:0 22px 45px rgba(70,42,113,.23)}
+.choice .number{font-size:11px;color:#8b7e94;font-weight:700;letter-spacing:1.5px}.choice h2{font-size:25px;margin:8px 0 9px;color:#462a71;font-weight:800}.choice p{font-size:13px;line-height:1.6;color:#6d6474;margin:0}
+.open{margin-top:auto;display:inline-flex;align-items:center;justify-content:center;background:#462a71;color:#fff;border-radius:10px;padding:12px 15px;font-size:13px;font-weight:700}
+@media(max-width:850px){.choices{grid-template-columns:1fr}.landing{padding:35px 18px}.landing h1{font-size:23px}}
+</style>
+</head>
+<body>
+<main class="landing"><div class="landing-wrap">
+<div class="logo"><img src="logo-liga.png" alt="LIGA"></div>
+<h1>Simule sua pontuação na campanha da LIGA Outubro/2026</h1>
+<div class="choices">
+<a class="choice" href="consultor.html"><h2>Consultor</h2><p>Simule sua produção, recuperação, seguros, aceleradores e zona de risco.</p><span class="open">Abrir simulador →</span></a>
+<a class="choice" href="supervisor.html"><h2>Supervisor</h2><p>Simule sua pontuação de liderança com base na equipe, produção MIX e bônus.</p><span class="open">Abrir simulador →</span></a>
+<a class="choice" href="coordenador.html"><h2>Coordenador</h2><p>Simule sua pontuação considerando supervisores, lojas, produção MIX e bônus.</p><span class="open">Abrir simulador →</span></a>
+</div>
+</div></main>
+</body></html>

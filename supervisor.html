@@ -1,0 +1,41 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LIGA Outubro/2026 — Liderança</title><link rel="stylesheet" href="styles.css"><style>
+.mix-list{display:flex;flex-direction:column;gap:10px}.mix-product{border:1px solid #eee2da;border-radius:11px;padding:13px;background:#fffaf7}.mix-name{font-size:13px;font-weight:800;color:var(--purple);margin-bottom:9px}.mix-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.mix-row span{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8a7e8c;margin:0 0 5px}.mix-row input{width:100%;padding:10px 11px;border:1px solid #d9ccc3;border-radius:8px;background:#fff;color:#2d2237;font-size:14px;outline:none}.mix-row input:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(242,99,34,.12)}@media(max-width:700px){.mix-row{grid-template-columns:1fr}}
+</style></head><body>
+<header class="top"><a href="index.html" style="color:#fff;text-decoration:none;font-size:12px;font-weight:800;opacity:.85;margin-right:22px">← PERFIS</a><div><div class="brand">LIGA • LOJAS HELP!</div><div class="title">Simulador — Supervisor</div><div class="subtitle">Simule sua pontuação na Campanha LIGA Outubro/2026.</div></div><div class="header-logo"><img src="logo-liga.png" alt="LIGA"></div></header>
+<main class="wrap"><div class="layout"><section id="form"></section><aside class="sticky"><div class="card"><div class="hero"><div class="label">Pontuação final estimada</div><div class="points" id="final">0</div><small id="teto">teto: 15.000 pontos</small><div class="meter"><div id="bar"></div></div><div class="metertext" id="metertext">0 / 15.000 pontos</div></div><div class="kpis">
+  <div class="kpi"><small>Prêmio equipe</small><strong id="premioEquipe">0,00</strong></div>
+  <div class="kpi"><small>Parcela liderança</small><strong id="parcelaLideranca">0,00</strong></div>
+</div><div class="kpis"><div class="kpi"><small>Produção MIX</small><strong id="mix">0</strong></div><div class="kpi"><small>Meta MIX</small><strong id="metaMix">0</strong></div><div class="kpi"><small>Atingimento da Meta MIX</small><strong id="atingimento">0%</strong></div><div class="kpi"><small>Bônus sobre Produção</small><strong id="bonus">0</strong></div></div><div class="breakdown"></div><div class="actions"><button class="btn primary" id="copy">Copiar resultado</button><button class="btn secondary" id="clear">Limpar</button></div></div></aside></div><div class="card faq"><div class="sectionhead"><h2>FAQ — Outubro/2026</h2><span>Regras de liderança</span></div><div id="faq"></div></div><div class="footer">Esse simulador é um apoio. A apuração oficial da Campanha LIGA mensal é realizada pelo time de BI.</div></main><script src="config-outubro.js"></script><script>
+const $=id=>document.getElementById(id);
+const n=id=>Math.max(0,parseFloat($(id)?.value)||0);
+const fmt=v=>Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const money=v=>Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const mixIds=['cnc','bmg','cartao','cons','priv','ant'];
+const getMeta=id=>n('meta_'+id);
+function build(){
+ const people=Array.from({length:10},(_,i)=>`<div class="field"><label>Consultor ${i+1} — pontos</label><input class="person" id="p${i+1}" type="number" min="0"></div>`).join('');
+ const products=[
+  ['cnc','CNC'],['bmg','Bmg Card (Autorizado + Complementar Convênios)'],['cartao','Cartão Benefício (Autorizado + Complementar Convênios)'],['cons','Consignado (sem portabilidade)'],['priv','Consignado Privado'],['ant','Antecipação de Benefício']
+ ];
+ const fields=products.map(([id,label])=>`<div class="mix-product"><div class="mix-name">${label}</div><div class="mix-row"><div><span>Produção</span><input id="${id}" type="number" min="0" step="0.01" placeholder="R$ 0,00"></div><div><span>Meta</span><input id="meta_${id}" type="number" min="0" step="0.01" placeholder="R$ 0,00"></div></div></div>`).join('');
+ $('form').innerHTML=`<div class="card"><div class="sectionhead"><h2>Pontuação dos Consultores</h2><span>Informe os pontos da equipe</span></div><div class="grid">${people}</div></div><div class="card"><div class="sectionhead"><h2>Produção MIX</h2><span>Produção e meta por produto</span></div><div class="mix-list">${fields}</div></div>`;
+ document.querySelectorAll('input').forEach(x=>x.addEventListener('input',calc));
+ calc();
+}
+function calc(){
+ let team=0; for(let i=1;i<=10;i++) team+=n('p'+i);
+ let mix=mixIds.reduce((sum,id)=>sum+n(id),0);
+ let metaMix=mixIds.reduce((sum,id)=>sum+getMeta(id),0);
+ const ating=metaMix?mix/metaMix:0;
+ const mixPct=ating>=1?.0025:ating>=.9?.0015:0;
+ let bonus=mix*mixPct;
+ let parcela=team*.5;
+ let final=Math.min(15000,parcela+bonus);
+ $('final').textContent=fmt(final);$('premioEquipe').textContent=fmt(team);$('parcelaLideranca').textContent=fmt(parcela);$('mix').textContent=fmt(mix);$('metaMix').textContent=fmt(metaMix);$('atingimento').textContent=(ating*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';$('bonus').textContent=fmt(bonus);$('p2').textContent=fmt(bonus);$('p4').textContent=fmt(final);$('teto').textContent='teto: 15.000 pontos';$('metertext').textContent=fmt(final)+' / 15.000 pontos';$('bar').style.width=Math.min(100,final/15000*100)+'%';
+}
+$('clear').onclick=()=>{document.querySelectorAll('input').forEach(x=>x.value='');calc()};
+$('copy').onclick=()=>navigator.clipboard?.writeText(`Minha simulação LIGA Outubro/2026 — Supervisor: ${$('final').textContent} pontos. Produção MIX: ${$('mix').textContent}. Meta MIX: ${$('metaMix').textContent}. Atingimento: ${$('atingimento').textContent}. Bônus sobre produção: ${$('bonus').textContent} pontos.`);
+const faq=[['Quanto o Supervisor recebe sobre o prêmio dos consultores?','50% sobre o prêmio dos consultores da loja.'],['Qual é o bônus do Supervisor sobre o MIX?','Com 100% ou mais da meta MIX: 0,25% sobre o total produzido. Entre 90% e 99,99%: 0,15%. Além disso, há bônus de 0,15% para 8 contratos de Consignado Privado, 0,15% ao atingir a meta de Reconquista e 0,15% para 10 contratos de Consignado Bmg.'],['Qual é o teto do Supervisor?','15.000 pontos.'],['Como funciona a premiação do Coordenador?','De 3 a 8 lojas: 35% sobre o prêmio dos supervisores. Acima de 9 lojas: 30%. O Coordenador deve ter no mínimo 3 lojas sob gestão.'],['Qual é o bônus do Coordenador sobre o MIX?','Com 100% ou mais da meta MIX: 0,10% sobre o total produzido. Entre 90% e 99,99%: 0,05%. Há ainda +0,10% por média de 8 contratos de Consignado Privado, +0,10% por 100% da meta de Reconquista e +0,10% por média de 10 contratos de Consignado Bmg.'],['Qual é o teto do Coordenador?','20.000 pontos.']];
+$('faq').innerHTML=faq.map(x=>`<div class="item"><button onclick="this.parentElement.classList.toggle('open')">${x[0]} <span class="tag">LIGA</span></button><div class="answer">${x[1]}</div></div>`).join('');
+build();
+</script>
