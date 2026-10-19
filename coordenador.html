@@ -72,6 +72,7 @@
           <div class="kpi"><small>Meta MIX</small><strong id="metaMix">0,00</strong></div>
           <div class="kpi"><small>Atingimento da Meta MIX</small><strong id="atingimento">0,00%</strong></div>
           <div class="kpi"><small>Bônus sobre Produção</small><strong id="bonus">0,00</strong></div>
+          <div class="kpi"><small>Campanha Extra Seguros</small><strong id="extraSegPts">0,00</strong></div>
         </div>
 
         <div class="actions">
@@ -90,9 +91,59 @@
 </main>
 <script src="config-outubro.js"></script><script>
 const $=id=>document.getElementById(id);
+function parseBRNumber(value){
+  let v=String(value??'').trim().replace(/\s|R\$/g,'');
+  if(!v) return 0;
+  if(v.includes(',')) v=v.replace(/\./g,'').replace(',','.');
+  else if((v.match(/\./g)||[]).length===1 && /\.\d{1,2}$/.test(v)) v=v.replace('.', '.');
+  else if(v.includes('.')) v=v.replace(/\./g,'');
+  return Math.max(0,parseFloat(v)||0);
+}
+function formatBRTyping(value){
+  let raw=String(value??'').replace(/[^0-9,\.]/g,'');
+  const comma=raw.indexOf(',');
+  let integerPart, decimalPart='', hasComma=comma>=0;
+  if(hasComma){
+    integerPart=raw.slice(0,comma).replace(/[.,]/g,'');
+    decimalPart=raw.slice(comma+1).replace(/[^0-9]/g,'').slice(0,2);
+  } else {
+    const dotDecimal=raw.match(/^(\d+)\.(\d{1,2})$/);
+    if(dotDecimal){ integerPart=dotDecimal[1]; decimalPart=dotDecimal[2]; hasComma=true; }
+    else integerPart=raw.replace(/\./g,'').replace(/[^0-9]/g,'');
+  }
+  integerPart=integerPart.replace(/^0+(?=\d)/,'');
+  const grouped=integerPart.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  return grouped+(hasComma?','+decimalPart:'');
+}
+function formatBRFixed(value){
+  return Number(value||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function setupCurrencyInputs(root=document){
+  root.querySelectorAll('.currency-input').forEach(input=>{
+    input.setAttribute('inputmode','decimal');
+    input.setAttribute('autocomplete','off');
+    input.addEventListener('focus',()=>{
+      input.value=input.value.replace(/\./g,'').replace(/,00$/,'');
+    });
+    input.addEventListener('input',()=>{
+      const start=input.selectionStart;
+      const old=input.value;
+      input.value=formatBRTyping(old);
+      // Keep the caret close to its previous position after grouping separators are inserted.
+      if(start!==null){
+        const delta=input.value.length-old.length;
+        try{input.setSelectionRange(Math.max(0,start+delta),Math.max(0,start+delta));}catch(e){}
+      }
+    });
+    input.addEventListener('blur',()=>{
+      if(String(input.value).trim()!=='') input.value=formatBRFixed(parseBRNumber(input.value));
+    });
+  });
+}
 const n=id=>{
   const el=$(id);
   if(!el) return 0;
+  if(el.classList.contains('currency-input')) return parseBRNumber(el.value);
   let v=String(el.value||'').replace(/\s/g,'');
   if(v.includes(',')&&v.includes('.')) v=v.replace(/\./g,'').replace(',','.');
   else if(v.includes(',')) v=v.replace(',','.');
@@ -102,21 +153,21 @@ const fmt=v=>Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFr
 const money=v=>Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 
 const products=[
- ['cnc','CNC'],
- ['bmg','Bmg Card (Autorizado + Complementar Convênios)'],
- ['cartao','Cartão Benefício (Autorizado + Complementar Convênios)'],
- ['cons','Consignado (sem portabilidade)'],
- ['priv','Consignado Privado'],
- ['ant','Antecipação de Benefício']
+ ['cnc','CNC — em R$'],
+ ['bmg','Bmg Card — em R$'],
+ ['cartao','Cartão Benefício — em R$'],
+ ['cons','Consignado Bmg — em R$'],
+ ['priv','Consignado Privado — em R$'],
+ ['ant','Antecipação de Benefício — em R$']
 ];
 
 function build(){
   let people='';
-  for(let i=1;i<=15;i++){
-    people+=`<div class="field"><label>Supervisor ${i} — pontos</label><input class="person" id="p${i}" type="number" min="0" step="0.01" placeholder="0,00"></div>`;
+  for(let i=1;i<=16;i++){
+    people+=`<div class="field"><label>Supervisor ${i} — pontos</label><input class="person" id="p${i}" type="number" min="0" step="0.01"></div>`;
   }
 
-  const fields=products.map(([id,label])=>`<div class="mix-product"><div class="mix-name">${label}</div><div class="mix-row"><div><span>Produção</span><input id="${id}" type="number" min="0" step="0.01" placeholder="R$ 0,00"></div><div><span>Meta</span><input id="meta_${id}" type="number" min="0" step="0.01" placeholder="R$ 0,00"></div></div></div>`).join('');
+  const fields=products.map(([id,label])=>`<div class="mix-product"><div class="mix-name">${label}</div><div class="mix-row"><div><span>Produção</span><input class="currency-input" id="${id}" type="text" inputmode="decimal"></div><div><span>Meta</span><input class="currency-input" id="meta_${id}" type="text" inputmode="decimal"></div></div></div>`).join('');
 
   $('form').innerHTML=`
     <div class="card">
@@ -128,15 +179,22 @@ function build(){
       <div class="sectionhead"><h2>Produção MIX</h2><span>Produção e meta por produto</span></div>
       <div class="mix-list">${fields}</div>
     </div>
+
+    <div class="card">
+      <div class="sectionhead"><h2>Campanha Extra Seguros</h2><span>Pontuação adicional por loja</span></div>
+      <div class="hint" id="extraSegNext">Informe a quantidade de contratos em cada loja que deseja considerar. Todas as lojas preenchidas precisam ter pelo menos 30 contratos para liberar os 600 pontos.</div>
+      <div class="grid">${Array.from({length:15},(_,i)=>`<div class="field"><label>Loja ${i+1} — Quantidade de Contratos</label><input id="extraSegLoja${i+1}" class="extra-seg-loja" type="number" min="0" step="1"><div class="hint" id="extraSegLojaNext${i+1}">Faltam 30 contratos para atingir a meta desta loja.</div></div>`).join('')}</div>
+    </div>
 `;
 
+  setupCurrencyInputs();
   document.querySelectorAll('input').forEach(el=>el.addEventListener('input',calc));
   calc();
 }
 
 function calc(){
   let totalSupervisores=0;
-  for(let i=1;i<=15;i++) totalSupervisores+=n('p'+i);
+  for(let i=1;i<=16;i++) totalSupervisores+=n('p'+i);
 
   const lojas=n('lojas');
   const pctSobreSupervisores=lojas>=9?0.30:0.35;
@@ -157,7 +215,21 @@ function calc(){
   if(n('consMedia')>=10) mixPct+=0.001;
 
   const bonus=mix*mixPct;
-  const extra=lojas>0 && n('extraSeg')>=30*lojas ? 600 : 0;
+  const extraSegLojas=Array.from({length:15},(_,i)=>({numero:i+1,raw:String($('extraSegLoja'+(i+1))?.value??'').trim(),qtd:Math.floor(n('extraSegLoja'+(i+1)))})).filter(loja=>loja.raw!=='');
+  extraSegLojas.forEach(loja=>{
+    const hint=$('extraSegLojaNext'+loja.numero);
+    if(loja.qtd>=30) hint.textContent=`Meta atingida: ${loja.qtd} contratos. Esta loja cumpre o requisito.`;
+    else {const faltam=30-loja.qtd;hint.textContent=`Faltam ${faltam} ${faltam===1?'contrato':'contratos'} para esta loja atingir 30.`;}
+  });
+  for(let i=1;i<=15;i++){
+    const input=$('extraSegLoja'+i);
+    if(input && !String(input.value??'').trim()) $('extraSegLojaNext'+i).textContent='Preencha esta loja apenas se quiser considerá-la na campanha.';
+  }
+  const lojasAbaixo=extraSegLojas.filter(loja=>loja.qtd<30);
+  const extra=extraSegLojas.length>0 && lojasAbaixo.length===0 ? 600 : 0;
+  if(extraSegLojas.length===0) $('extraSegNext').textContent='Preencha a quantidade de contratos das lojas que deseja considerar. Cada loja preenchida precisa ter pelo menos 30 contratos para liberar 600 pontos extras.';
+  else if(lojasAbaixo.length===0) $('extraSegNext').textContent=`${extraSegLojas.length} ${extraSegLojas.length===1?'loja preenchida':'lojas preenchidas'}; todas atingiram pelo menos 30 contratos. Campanha Extra Seguros: 600 pontos.`;
+  else $('extraSegNext').textContent=`${lojasAbaixo.length} ${lojasAbaixo.length===1?'loja ainda precisa':'lojas ainda precisam'} atingir 30 contratos. Enquanto qualquer loja preenchida estiver abaixo da meta, a pontuação extra será 0.`;
   const final=Math.min(20000,parcelaLideranca+bonus+extra);
 
   $('equipe').textContent=fmt(totalSupervisores);
@@ -166,6 +238,7 @@ function calc(){
   $('metaMix').textContent=fmt(metaMix);
   $('atingimento').textContent=(ating*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
   $('bonus').textContent=fmt(bonus);
+  $('extraSegPts').textContent=fmt(extra);
 
   $('teto').textContent='teto: 20.000 pontos';
   $('metertext').textContent=fmt(final)+' / 20.000 pontos';
@@ -178,7 +251,7 @@ $('clear').onclick=()=>{
 };
 
 $('copy').onclick=()=>{
-  const txt=`Minha simulação LIGA Outubro/2026 — Coordenador: ${$('final').textContent} pontos. Total prêmio supervisores: ${$('equipe').textContent}. Percentual sobre prêmio supervisores: ${$('pctSupervisores').textContent}. Produção MIX: ${$('mix').textContent}. Meta MIX: ${$('metaMix').textContent}. Atingimento: ${$('atingimento').textContent}. Bônus sobre produção: ${$('bonus').textContent} pontos.`;
+  const txt=`Minha simulação LIGA Outubro/2026 — Coordenador: ${$('final').textContent} pontos. Total prêmio supervisores: ${$('equipe').textContent}. Percentual sobre prêmio supervisores: ${$('pctSupervisores').textContent}. Produção MIX: ${$('mix').textContent}. Meta MIX: ${$('metaMix').textContent}. Atingimento: ${$('atingimento').textContent}. Bônus sobre produção: ${$('bonus').textContent} pontos. Campanha Extra Seguros: ${$('extraSegPts').textContent} pontos.`;
   navigator.clipboard?.writeText(txt);
 };
 
@@ -193,18 +266,18 @@ build();
 </script><script>
 const $=id=>document.getElementById(id); const n=id=>Math.max(0,parseFloat($(id)?.value)||0); const fmt=v=>Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); let mode='coordenador';
 function build(){
- const count=15;
+ const count=16;
  let people='';
  for(let i=1;i<=count;i++) people+=`<div class="field"><label>Supervisor ${i} — pontos</label><input class="person" id="p${i}" type="number" min="0"></div>`;
  const products=[
-  ['cnc','CNC'],['bmg','Bmg Card (Autorizado + Complementar Convênios)'],
-  ['cartao','Cartão Benefício (Autorizado + Complementar Convênios)'],
-  ['cons','Consignado (sem portabilidade)'],['priv','Consignado Privado'],
-  ['ant','Antecipação de Benefício']
+  ['cnc','CNC — em R$'],['bmg','Bmg Card — em R$'],
+  ['cartao','Cartão Benefício — em R$'],
+  ['cons','Consignado Bmg — em R$'],['priv','Consignado Privado — em R$'],
+  ['ant','Antecipação de Benefício — em R$']
  ];
  const fields=products.map(([id,label])=>`<div class="mix-product"><div class="mix-name">${label}</div><div class="mix-row">
-   <div><span>Produção</span><input id="${id}" type="number" min="0" step="0.01" placeholder="R$ 0,00"></div>
-   <div><span>Meta</span><input id="meta_${id}" type="number" min="0" step="0.01" placeholder="R$ 0,00"></div>
+   <div><span>Produção</span><input class="currency-input" id="${id}" type="text" inputmode="decimal"></div>
+   <div><span>Meta</span><input class="currency-input" id="meta_${id}" type="text" inputmode="decimal"></div>
  </div></div>`).join('');
  const indicators=`<div class="field"><label>Quantidade de lojas sob gestão</label><input id="lojas" type="number" min="0"></div>
  <div class="field"><label>Média de Consignado Privado por loja</label><input id="privMedia" type="number" min="0"></div>
@@ -219,7 +292,7 @@ function build(){
  calc();
 }
 function calc(){
- let team=0; for(let i=1;i<=15;i++) team+=n('p'+i);
+ let team=0; for(let i=1;i<=16;i++) team+=n('p'+i);
  const ids=['cnc','bmg','cartao','cons','priv','ant'];
  let mix=ids.reduce((sum,id)=>sum+n(id),0);
  let metaMix=ids.reduce((sum,id)=>sum+n('meta_'+id),0);
